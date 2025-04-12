@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,22 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Custom colors for stock market application
+				stock: {
+					up: '#4CAF50',    // Green for positive trends
+					down: '#E53935',  // Red for negative trends
+					neutral: '#757575',
+					blue: {
+						light: '#2C5282',
+						DEFAULT: '#1A2C42',
+						dark: '#152238'
+					},
+					gray: {
+						light: '#F5F7FA',
+						DEFAULT: '#E4E7EB',
+						dark: '#687B8E'
+					}
 				}
 			},
 			borderRadius: {
@@ -84,11 +101,22 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'fade-in': {
+					'0%': {
+						opacity: '0',
+						transform: 'translateY(10px)'
+					},
+					'100%': {
+						opacity: '1',
+						transform: 'translateY(0)'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'fade-in': 'fade-in 0.3s ease-out'
 			}
 		}
 	},

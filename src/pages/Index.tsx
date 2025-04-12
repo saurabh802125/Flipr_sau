@@ -6,6 +6,7 @@ import StockChart from '@/components/StockChart';
 import StockList from '@/components/StockList';
 import WatchlistComponent from '@/components/WatchlistComponent';
 import StockSearch from '@/components/StockSearch';
+import CSVUpload from '@/components/CSVUpload';
 import { Stock, StockService } from '@/services/StockData';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -88,6 +89,10 @@ const Index = () => {
         
         <section id="chart-section" className="mb-8">
           {selectedStock && <StockChart stock={selectedStock} />}
+        </section>
+        
+        <section className="mb-8">
+          <CSVUpload />
         </section>
         
         <section id="watchlist" className="mb-8">

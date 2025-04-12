@@ -1,16 +1,22 @@
-
+// server/config/db.js
 const mongoose = require('mongoose');
 
-// Replace this with your actual MongoDB connection string
+// MongoDB connection string
+// For production, set this as an environment variable
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/stockvision';
 
 const connectDB = async () => {
   try {
-    await mongoose.connect(mongoURI);
-    console.log('MongoDB Connected...');
+    const conn = await mongoose.connect(mongoURI, {
+      // These options are no longer needed in newer versions of mongoose
+      // but included here for compatibility with older MongoDB versions
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
   } catch (err) {
-    console.error(err.message);
-    // Exit process with failure
+    console.error(`Error connecting to MongoDB: ${err.message}`);
     process.exit(1);
   }
 };

@@ -1,11 +1,15 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
+import { ApiService } from '@/services/ApiService';
 
-const CSVUpload: React.FC = () => {
+interface CSVUploadProps {
+  onUploadSuccess?: () => void;
+}
+
+const CSVUpload: React.FC<CSVUploadProps> = ({ onUploadSuccess }) => {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -38,29 +42,21 @@ const CSVUpload: React.FC = () => {
 
     setIsLoading(true);
 
-    // Create form data
-    const formData = new FormData();
-    formData.append('file', file);
-
     try {
-      const response = await fetch('http://localhost:5000/api/stocks/upload', {
-        method: 'POST',
-        body: formData,
-      });
-
-      const data = await response.json();
+      const response = await ApiService.uploadCSV(file);
       
-      if (!response.ok) {
-        throw new Error(data.msg || 'Something went wrong');
-      }
-
       toast({
         title: "Upload successful",
-        description: `${data.count} stocks have been uploaded to the database`,
+        description: `${response.count} stocks have been uploaded to the database`,
       });
 
       setFile(null);
-      // You might want to trigger a data refresh here
+      
+      // Trigger refresh
+      if (onUploadSuccess) {
+        onUploadSuccess();
+      }
+      
     } catch (error) {
       console.error('Upload error:', error);
       toast({
@@ -96,6 +92,16 @@ const CSVUpload: React.FC = () => {
             <Upload className="h-4 w-4" />
             {isLoading ? "Uploading..." : "Upload"}
           </Button>
+        </div>
+        
+        <div className="text-sm text-gray-600">
+          <a 
+            href="/sample-stock-template.csv" 
+            download
+            className="text-primary hover:underline"
+          >
+            Download sample CSV template
+          </a>
         </div>
         
         {file && (

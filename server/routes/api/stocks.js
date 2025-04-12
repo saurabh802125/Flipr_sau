@@ -1,13 +1,35 @@
-
+// server/routes/api/stocks.js
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const csv = require('csv-parser');
 const fs = require('fs');
 const Stock = require('../../models/Stock');
+const validateCSV = require('../../middleware/csvValidation');
 
 // Set up multer for file uploads
-const upload = multer({ dest: 'uploads/' });
+const storage = multer.diskStorage({
+  destination: function(req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function(req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + '.csv');
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  fileFilter: function(req, file, cb) {
+    // Accept only csv files
+    if (!file.originalname.match(/\.(csv)$/)) {
+      return cb(new Error('Only CSV files are allowed'), false);
+    }
+    cb(null, true);
+  },
+  limits: {
+    fileSize: 10 * 1024 * 1024 // 10MB limit
+  }
+});
 
 // @route   GET api/stocks
 // @desc    Get all stocks
@@ -27,7 +49,7 @@ router.get('/', async (req, res) => {
 // @access  Public
 router.get('/:symbol', async (req, res) => {
   try {
-    const stock = await Stock.findOne({ symbol: req.params.symbol });
+    const stock = await Stock.findOne({ symbol: req.params.symbol.toUpperCase() });
     
     if (!stock) {
       return res.status(404).json({ msg: 'Stock not found' });
@@ -43,39 +65,34 @@ router.get('/:symbol', async (req, res) => {
 // @route   POST api/stocks/upload
 // @desc    Upload and process CSV file
 // @access  Public
-router.post('/upload', upload.single('file'), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ msg: 'No file uploaded' });
+router.post('/upload', upload.single('file'), validateCSV, async (req, res) => {
+  try {
+    // Process the CSV data (pre-validated by middleware)
+    const processedData = processStockData(req.csvResults);
+    
+    // Save to database - using upsert to update existing or create new
+    for (const stock of processedData) {
+      await Stock.findOneAndUpdate(
+        { symbol: stock.symbol },
+        stock,
+        { upsert: true, new: true }
+      );
+    }
+    
+    // Delete the uploaded file
+    fs.unlinkSync(req.file.path);
+    
+    res.json({ msg: 'Stock data uploaded successfully', count: processedData.length });
+  } catch (err) {
+    console.error(err.message);
+    
+    // Delete the uploaded file if it exists
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    
+    res.status(500).send('Server Error');
   }
-  
-  const results = [];
-  
-  fs.createReadStream(req.file.path)
-    .pipe(csv())
-    .on('data', (data) => results.push(data))
-    .on('end', async () => {
-      try {
-        // Process the CSV data
-        const processedData = processStockData(results);
-        
-        // Save to database - using upsert to update existing or create new
-        for (const stock of processedData) {
-          await Stock.findOneAndUpdate(
-            { symbol: stock.symbol },
-            stock,
-            { upsert: true, new: true }
-          );
-        }
-        
-        // Delete the uploaded file
-        fs.unlinkSync(req.file.path);
-        
-        res.json({ msg: 'Stock data uploaded successfully', count: processedData.length });
-      } catch (err) {
-        console.error(err.message);
-        res.status(500).send('Server Error');
-      }
-    });
 });
 
 // Helper function to process CSV data
@@ -83,7 +100,7 @@ function processStockData(csvData) {
   const stockMap = {};
   
   csvData.forEach(row => {
-    const symbol = row.symbol || '';
+    const symbol = (row.symbol || '').toUpperCase();
     if (!symbol) return;
     
     // Initialize stock if it doesn't exist
